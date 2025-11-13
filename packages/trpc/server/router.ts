@@ -14,6 +14,7 @@ import { teamRouter } from './team-router/router';
 import { templateRouter } from './template-router/router';
 import { router } from './trpc';
 import { webhookRouter } from './webhook-router/router';
+import { workOrderRouter } from './work-order-router/router';
 
 export const appRouter = router({
   enterprise: enterpriseRouter,
@@ -31,6 +32,7 @@ export const appRouter = router({
   template: templateRouter,
   webhook: webhookRouter,
   embeddingPresign: embeddingPresignRouter,
+  workOrder: workOrderRouter,
 });
 
 export type AppRouter = typeof appRouter;

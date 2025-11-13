@@ -36,6 +36,13 @@ enum Role {
   USER
 }
 
+enum WorkOrderRole {
+  CONTRACTS_TEAM
+  APPROVER
+  SITE_MANAGER
+  CONTRACTOR
+}
+
 model User {
   id               Int              @id @default(autoincrement())
   name             String?
@@ -48,6 +55,7 @@ model User {
   updatedAt        DateTime         @default(now()) @updatedAt
   lastSignedIn     DateTime         @default(now())
   roles            Role[]           @default([USER])
+  workOrderRole    WorkOrderRole? // Work Order specific role
   identityProvider IdentityProvider @default(DOCUMENSO) // Todo: (RR7) Remove after RR7 migration.
   avatarImageId    String?
   disabled         Boolean          @default(false)
@@ -73,6 +81,9 @@ model User {
   siteSettings       SiteSettings[]
   passkeys           Passkey[]
   avatarImage        AvatarImage?           @relation(fields: [avatarImageId], references: [id], onDelete: SetNull)
+
+  // Work Order relations
+  siteUsers SiteUser[]
 
   @@index([email])
 }
@@ -429,6 +440,9 @@ model Envelope {
   documentMeta   DocumentMeta @relation(fields: [documentMetaId], references: [id])
 
   envelopeAttachments EnvelopeAttachment[]
+
+  // Work Order relation
+  workOrder WorkOrder?
 
   @@index([folderId])
   @@index([teamId])
@@ -1051,4 +1065,100 @@ model OrganisationAuthenticationPortal {
 model Counter {
   id    String @id
   value Int
+}
+
+// ===== Work Order Management System Models =====
+
+enum WorkOrderStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED_BY_HQ
+  SIGNED_BY_CONTRACTOR
+  REJECTED
+}
+
+model Site {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  location  String?
+  contactPhone String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  siteUsers  SiteUser[]
+  workOrders WorkOrder[]
+
+  @@index([code])
+}
+
+model SiteUser {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([siteId, userId])
+  @@index([siteId])
+  @@index([userId])
+}
+
+model Contractor {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workOrders  WorkOrder[]
+  otpSessions ContractorOtpSession[]
+
+  @@index([phone])
+}
+
+model ContractorOtpSession {
+  id           String   @id @default(cuid())
+  contractorId String
+  contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  otp          String
+  phone        String
+  verified     Boolean  @default(false)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([contractorId])
+  @@index([phone])
+}
+
+model WorkOrder {
+  id              String          @id @default(cuid())
+  workOrderNumber String          @unique
+
+  // Link to existing envelope
+  envelopeId      String          @unique
+  envelope        Envelope        @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+
+  // Work order specific fields
+  siteId          String
+  site            Site            @relation(fields: [siteId], references: [id])
+
+  contractorId    String
+  contractor      Contractor      @relation(fields: [contractorId], references: [id])
+
+  status          WorkOrderStatus @default(DRAFT)
+
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  approvedAt      DateTime?
+  signedAt        DateTime?
+  rejectedAt      DateTime?
+
+  @@index([siteId])
+  @@index([contractorId])
+  @@index([status])
+  @@index([workOrderNumber])
 }
