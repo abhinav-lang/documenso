@@ -61,6 +61,10 @@ export const AppNavDesktop = ({
         href: `/t/${teamUrl}/templates`,
         label: msg`Templates`,
       },
+      {
+        href: `/t/${teamUrl}/work-orders`,
+        label: msg`Work Orders`,
+      },
     ];
   }, [currentTeam, organisations]);
 
